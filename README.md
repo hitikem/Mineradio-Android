@@ -102,6 +102,51 @@ Mineradio 的架构其实特别适合移植，关键在于两点：
 
 ## 更新日志
 
+### 2.2.0-android.5
+
+**修复：Node 服务启动后立即退出，界面一直卡在「本地音乐服务启动失败」**
+
+根因是**依赖与内嵌运行时的版本不匹配**：内嵌的是 nodejs-mobile 的
+**Node 18.20.4**，而 Node 18 的 `require()` 不支持加载 ESM 包。
+`music-metadata@11.x` 是纯 ESM 包（`"type": "module"`，`exports` 里只有
+`import` 条件），它在 `NeteaseCloudMusicApi/module/cloud.js` 顶层被 `require`：
+
+```
+Error [ERR_PACKAGE_PATH_NOT_EXPORTED]: No "exports" main defined in .../music-metadata/package.json
+```
+
+`server.js` 于是在 `require` 阶段就抛错、进程退出，`server.listen()` 从未执行，
+Kotlin 侧的端口探测自然全部失败。
+
+这个 bug 只在手机上出现：桌面版 Electron 内置的是 Node 22（支持 `require(esm)`），
+所以同一份 `node_modules` 在电脑上完全正常。
+
+修法：`music-metadata` 固定到 `7.14.0` —— 官方 `dist-tags.cjs` 指向的、
+仍然提供 CommonJS 的最后一个版本。整条依赖链（file-type / strtok3 /
+token-types / media-typer）随之下沉到对应 CJS 版本，实测在
+**Node 18.20.4** 上首页与 `/api/search` 均返回 200。
+
+**新增：启动诊断日志**
+
+启动失败时界面会多出「**查看启动日志**」入口（长按版本号也能进），
+里面是合并后的诊断报告：Kotlin 启动全过程、原生层 `node::Start` 的返回码／
+崩溃信号／`libnode.so` 实际加载路径、内存页大小、Node 自身输出的报错。
+可以直接截图，也可以一键分享成文件。见 [docs/BOOT_DIAGNOSTICS.md](docs/BOOT_DIAGNOSTICS.md)。
+
+**新增：构建期依赖体检**
+
+`scripts/scan-node18-incompatible.py` 会扫描全部依赖里「Node 18 加载不了」的包，
+并已接入 Gradle（`checkNode18Compat`）。以后再引入纯 ESM 依赖会**直接构建失败**，
+不会等到装到手机上才发现。
+
+**其它**
+
+- `main.js` 启动时记录 Node 版本与 `require(esm)` 能力，并在检测到
+  ESM-only 依赖时给出明确提示
+- `ASSET_REVISION` 1 → 2，保证老用户升级后重新解压运行时资源
+- `scripts/gen-build-manifest.py` 生成 `release-assets/libnode-manifest.txt`，
+  记录各 ABI `libnode.so` 进 APK 前后的 SHA256 与 LOAD 段对齐
+
 ### 2.2.0-android.2
 
 **修复：在 16KB 内存页的新机型上打不开**
@@ -149,6 +194,7 @@ Android 15 起，部分新机型（Pixel 8/9 系列、部分新旗舰）内核�
 
 | 限制 | 说明 |
 | --- | --- |
+| **16KB 内存页机型（arm64-v8a）仍会加载失败** | 2.2.0-android.2 曾用 `scripts/patch-elf-16kb.py` 给 `libnode.so` 打过 16KB 对齐补丁，但当前仓库里的 arm64 库是 nodejs-mobile 18.20.4 的**原始版本（4KB 对齐）**，`armeabi-v7a` / `x86_64` 则已是 16KB。因此在 16KB 页内核的机型（Pixel 8/9、部分新旗舰、手动切到 16KB 模式的小米新机）上 arm64 包会 `dlopen` 失败。**4KB 页机型（绝大多数手机，含红米 K80）不受影响。** 打开应用看诊断报告里的「内存页大小」即可确认：16384 即命中该问题。修法：重新对该库执行补丁脚本，或改用官方 16KB 对齐的 nodejs-mobile 构建。 |
 | **汽水音乐登录不可用** | 上游用真实 Electron 窗口加载汽水音乐的安全验证页并挂钩 `session.webRequest`，比另外三个平台多一层依赖（还需要 `qishui-auth-v6` 的资产服务器与 localStorage 交互）。网易云 / QQ 音乐 / 酷狗 的登录已通过原生 WebView 实现，**不受影响**。 |
 | **桌面专有能力不适用** | Wallpaper Engine 壁纸、完整桌面模式、桌面歌词独立窗口、系统托盘这些依赖 Windows 的能力在手机上不生效；前端对 `window.desktopWindow` 的每一处调用都有存在性判断，缺失时会自动降级，不影响主流程。 |
 | **无本地音乐导入** | 上游的本地音乐库依赖 Electron 的文件对话框与 `music-metadata` 扫描，暂未移植。 |

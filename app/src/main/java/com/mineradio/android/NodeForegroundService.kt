@@ -98,6 +98,7 @@ class NodeForegroundService : Service() {
         if (started) return
         started = true
 
+        BootLog.section("前台服务 bootstrap")
         worker.execute {
             try {
                 // 1) 解压运行时资源（仅首次或版本变化时）
@@ -108,12 +109,20 @@ class NodeForegroundService : Service() {
                         setPhase(Phase.INSTALLING, getString(R.string.boot_installing_pct, pct))
                         if (name.isNotEmpty() && pct % 20 == 0) Log.i(TAG, "解压中 $pct% $name")
                     }
+                } else {
+                    BootLog.i(TAG, "运行时资源已是最新，跳过解压")
                 }
 
                 // 2) 拉起内嵌 Node 服务
                 setPhase(Phase.STARTING_SERVER, getString(R.string.boot_starting_server))
+                val startedAt = System.currentTimeMillis()
                 val baseUrl = NodeRunner.start(this)
+                val cost = System.currentTimeMillis() - startedAt
+                BootLog.i(TAG, "NodeRunner.start 返回：${baseUrl ?: "null"}（耗时 ${cost}ms）")
+
                 if (baseUrl == null) {
+                    val detail = NodeRunner.lastDiagnosis.ifBlank { getString(R.string.boot_failed_server) }
+                    BootLog.e(TAG, "启动失败，诊断：$detail")
                     fail(getString(R.string.boot_failed_server))
                     return@execute
                 }
@@ -123,7 +132,7 @@ class NodeForegroundService : Service() {
                 mainHandler.post { createWebViewAndLoad(baseUrl) }
 
             } catch (t: Throwable) {
-                Log.e(TAG, "启动流程异常", t)
+                BootLog.e(TAG, "启动流程异常", t)
                 fail(t.message ?: getString(R.string.boot_failed_unknown))
             }
         }
@@ -201,9 +210,9 @@ class NodeForegroundService : Service() {
     }
 
     private fun fail(reason: String) {
-        failureReason = reason
+        failureReason = NodeRunner.lastDiagnosis.ifBlank { reason }
         setPhase(Phase.FAILED, reason)
-        Log.e(TAG, "启动失败：$reason")
+        BootLog.e(TAG, "启动失败：$reason　诊断：${NodeRunner.lastDiagnosis}")
     }
 
     private fun setPhase(next: Phase, text: String) {

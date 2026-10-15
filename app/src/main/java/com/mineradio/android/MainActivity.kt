@@ -70,11 +70,30 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        BootLog.i(TAG, "MainActivity.onCreate（版本 ${BuildConfig.VERSION_NAME}）")
+
+        // 版本号常显在启动遮罩上：用户一眼就能确认装的是哪个包，
+        // 避免「改了包但手机上还是旧版本」这种白忙一场的情况
+        binding.bootVersion.text =
+            getString(R.string.boot_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
+
         binding.bootRetry.setOnClickListener {
+            BootLog.i(TAG, "用户点了重试")
             pageReady = false
             binding.bootRetry.visibility = View.GONE
             binding.bootHint.visibility = View.GONE
+            binding.bootViewLog.visibility = View.GONE
             service?.retry()
+        }
+
+        binding.bootViewLog.setOnClickListener {
+            LogViewerActivity.start(this)
+        }
+
+        // 长按版本号也能进日志页：启动卡住、连失败提示都没出现时的兜底入口
+        binding.bootVersion.setOnLongClickListener {
+            LogViewerActivity.start(this)
+            true
         }
 
         setupBackHandling()
@@ -120,8 +139,11 @@ class MainActivity : AppCompatActivity() {
                 hideOverlay()
             }
             NodeForegroundService.Phase.FAILED -> {
+                // 失败时把服务里记录的详细原因也写进日志，界面上只留一句人话
+                BootLog.e(TAG, "界面进入失败态：$text")
                 showOverlay(text)
                 binding.bootRetry.visibility = View.VISIBLE
+                binding.bootViewLog.visibility = View.VISIBLE
                 binding.bootHint.visibility = View.VISIBLE
             }
             else -> showOverlay(text)
@@ -132,6 +154,7 @@ class MainActivity : AppCompatActivity() {
         binding.bootOverlay.visibility = View.VISIBLE
         binding.bootStatus.text = text.ifBlank { getString(R.string.boot_starting) }
         binding.bootRetry.visibility = View.GONE
+        binding.bootViewLog.visibility = View.GONE
         binding.bootHint.visibility = View.GONE
     }
 

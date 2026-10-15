@@ -16,6 +16,9 @@ class MineradioApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // 最先初始化启动日志：后面每一步都要往里写，崩溃也要靠它留证据
+        BootLog.init(this)
+        BootLog.i(TAG, "Application.onCreate")
         createNotificationChannel()
         installCrashLogger()
     }
@@ -43,6 +46,8 @@ class MineradioApp : Application() {
     private fun installCrashLogger() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            // 同时写进启动日志：用户导出诊断报告时能一次拿到全部线索
+            BootLog.e(TAG, "未捕获异常（线程 ${thread.name}）", throwable)
             try {
                 val dir = AppConfig.logDir(this)
                 if (!dir.exists()) dir.mkdirs()

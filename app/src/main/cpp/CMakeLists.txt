@@ -24,6 +24,29 @@ add_library(node SHARED IMPORTED)
 set_target_properties(node PROPERTIES IMPORTED_LOCATION "${NODEJS_MOBILE_LIB}")
 
 # ---------------------------------------------------------------------------
+# 构建标记：把「这份 libnode.so 到底是哪一个文件」编译进桥接库。
+#
+# 排查「Node 起不来」时最容易踩的坑就是：源码树里的 .so 和 APK 里的 .so
+# 不是同一个文件（或者某个 ABI 忘了换）。把 SHA256 编进去之后，
+# 应用内导出的诊断报告能直接对上号，不用再猜。
+# ---------------------------------------------------------------------------
+set(MINERADIO_ABI_HASHES "")
+foreach(abi arm64-v8a armeabi-v7a x86_64)
+  set(lib "${CMAKE_SOURCE_DIR}/../jniLibs/${abi}/libnode.so")
+  if(EXISTS "${lib}")
+    file(SHA256 "${lib}" hash)
+    string(SUBSTRING "${hash}" 0 16 short)
+    string(APPEND MINERADIO_ABI_HASHES "${abi}=${short} ")
+  else()
+    string(APPEND MINERADIO_ABI_HASHES "${abi}=(缺失) ")
+  endif()
+endforeach()
+
+set(MINERADIO_BUILD_NOTE "abi=${ANDROID_ABI} libnode[${MINERADIO_ABI_HASHES}]")
+
+message(STATUS "Mineradio 构建标记：${MINERADIO_BUILD_NOTE}")
+
+# ---------------------------------------------------------------------------
 # 我们自己的 JNI 桥接库
 #
 # 说明：这里刻意不引入 nodejs-mobile 的 include/ 头文件包（约 12MB、634 个文件）。
@@ -34,6 +57,10 @@ set_target_properties(node PROPERTIES IMPORTED_LOCATION "${NODEJS_MOBILE_LIB}")
 add_library(mineradio_node SHARED mineradio_node.cpp)
 
 find_library(log-lib log)
+
+target_compile_definitions(mineradio_node PRIVATE
+    MINERADIO_BUILD_NOTE="${MINERADIO_BUILD_NOTE}"
+)
 
 # 显式要求 16KB 段对齐。
 # NDK r27 起默认就是这个值，这里写死是为了避免将来换回旧 NDK 时

@@ -20,8 +20,8 @@ android {
         targetSdk = 35
 
         // 与上游 Mineradio 版本对齐，后缀标识安卓移植线
-        versionCode = 3
-        versionName = "2.2.0-android.3"
+        versionCode = 5
+        versionName = "2.2.0-android.5"
 
         // libnode.so 每个架构 58~65MB，打进一个包会非常大。
         // 按 ABI 拆分，另外额外产出一个含全部架构的 universal 包方便分发。
@@ -128,9 +128,54 @@ dependencies {
 val nodeAppDir = rootProject.layout.projectDirectory.dir("node-app")
 val nodeAppZipName = "mineradio-node-app.zip"
 
+/**
+ * 在打包前做一次「Node 18 兼容性」体检。
+ *
+ * 背景：nodejs-mobile 的运行时是 **Node 18.20.4**，它的 `require()` 不支持 ESM。
+ * 如果某个依赖是纯 ESM 包（`"type": "module"` 且 exports 里没有 `require` 条件），
+ * `require()` 会抛 ERR_PACKAGE_PATH_NOT_EXPORTED，server.js 会在 require 阶段
+ * 直接挂掉、Node 进程退出、端口从未监听 —— 表现为「本地音乐服务启动失败」。
+ *
+ * 这种问题在本机用新 Node 测试**永远测不出来**（Node 20.19+/22 支持 require(esm)），
+ * 只有装到手机上才炸。所以必须在构建阶段拦住。
+ */
+val checkNode18Compat by tasks.registering(Exec::class) {
+    group = "mineradio"
+    description = "检查 node-app/node_modules 里是否存在 Node 18 无法 require 的 ESM 包"
+
+    val script = rootProject.layout.projectDirectory.file("scripts/scan-node18-incompatible.py")
+    val target = nodeAppDir
+
+    onlyIf { script.asFile.exists() }
+
+    doFirst {
+        val python = (System.getenv("MINERADIO_PYTHON")
+            ?: listOf("python", "python3", "py").firstOrNull { candidate ->
+                runCatching {
+                    ProcessBuilder(candidate, "--version")
+                        .redirectErrorStream(true)
+                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                        .start()
+                        .waitFor() == 0
+                }.getOrDefault(false)
+            })
+
+        if (python == null) {
+            logger.lifecycle("跳过 Node 18 兼容性检查：找不到可用的 python（可设置 MINERADIO_PYTHON）")
+            return@doFirst
+        }
+
+        commandLine(python, script.asFile.absolutePath, target.asFile.absolutePath)
+        workingDir = target.asFile
+        isIgnoreExitValue = false
+    }
+}
+
 val prepareNodeAppZip by tasks.registering(Zip::class) {
     group = "mineradio"
     description = "把 node-app/ 打包成 assets/mineradio-node-app.zip"
+
+    dependsOn(checkNode18Compat)
 
     val required = listOf(
         "main.js",

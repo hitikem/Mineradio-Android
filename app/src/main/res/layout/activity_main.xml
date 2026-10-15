@@ -69,6 +69,14 @@
             android:textColor="@color/mineradio_bg"
             android:visibility="gone" />
 
+        <Button
+            android:id="@+id/boot_view_log"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/boot_view_log"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/boot_hint"
             android:layout_width="wrap_content"
@@ -79,5 +87,13 @@
             android:textColor="@color/mineradio_text_dim"
             android:textSize="11sp"
             android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/boot_version"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:textColor="@color/mineradio_text_dim"
+            android:textSize="10sp" />
     </LinearLayout>
 </FrameLayout>

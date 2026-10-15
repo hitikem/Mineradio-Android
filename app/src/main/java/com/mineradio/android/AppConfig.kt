@@ -17,8 +17,14 @@ object AppConfig {
     /**
      * 资源包版本号。每次改动 node-app/ 内容后 +1，
      * 应用启动时会据此判断是否需要重新解压。
+     *
+     * 修订记录：
+     *   1 —— 首个版本
+     *   2 —— music-metadata 降到 7.14.0（CommonJS）。11.x 是纯 ESM 包，
+     *        而 nodejs-mobile 的 Node 18 不支持 require(esm)，会导致
+     *        server.js 在 require 阶段直接抛错、Node 进程退出、端口从未监听。
      */
-    const val ASSET_REVISION = 1
+    const val ASSET_REVISION = 2
 
     /** assets 里的 Node 运行时压缩包名 */
     const val NODE_APP_ASSET = "mineradio-node-app.zip"

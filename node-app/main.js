@@ -128,13 +128,54 @@ process.on('unhandledRejection', (reason) => {
 
 // ------------------------------------------------------------------ 启动
 
+// 运行时画像：排查「同样的代码在电脑上好好的、手机上起不来」时，第一眼要看这个
+const runtimeInfo = {
+  node: process.version,
+  execPath: process.execPath,
+  arch: process.arch,
+  platform: process.platform,
+  // Node 20.19+ / 22+ 才能用 require() 加载 ESM 包；nodejs-mobile 是 Node 18，不能。
+  supportsRequireEsm: (() => {
+    const [major, minor] = process.versions.node.split('.').map(Number);
+    return major > 20 || (major === 20 && minor >= 19);
+  })(),
+};
+
 writeLog('INFO', [
   'Mineradio Android 内嵌 Node 运行时启动',
-  'node=' + process.version,
+  'node=' + runtimeInfo.node,
+  'arch=' + runtimeInfo.arch,
   'pid=' + process.pid,
+  'require(esm)=' + runtimeInfo.supportsRequireEsm,
   'projectDir=' + PROJECT_DIR,
   'userData=' + USER_DATA,
 ]);
+
+// Node 18 加载不了纯 ESM 依赖。这里**提前**把话说清楚：
+// 否则只会看到一句 ERR_PACKAGE_PATH_NOT_EXPORTED，很难联想到是运行时版本问题。
+if (!runtimeInfo.supportsRequireEsm) {
+  const esmOnly = ['music-metadata', 'file-type', 'strtok3', 'token-types'];
+  for (const name of esmOnly) {
+    try {
+      const resolved = require.resolve(name + '/package.json');
+      const meta = JSON.parse(fs.readFileSync(resolved, 'utf8'));
+      const hasRequireCondition = (function scan(node) {
+        if (!node || typeof node !== 'object') return false;
+        if (Object.prototype.hasOwnProperty.call(node, 'require')) return true;
+        return Object.values(node).some(scan);
+      })(meta.exports);
+      if (meta.type === 'module' && !hasRequireCondition) {
+        writeLog('ERROR', [
+          `依赖「${name}@${meta.version}」是纯 ESM 包，当前 Node ${runtimeInfo.node} 无法用 require() 加载。`,
+          '请把该依赖固定到仍提供 CommonJS 的版本（music-metadata 用 dist-tags.cjs 指向的 7.14.0），',
+          '运行 scripts/scan-node18-incompatible.py 可以看到完整清单。',
+        ]);
+      }
+    } catch (_) {
+      // 没装这个包就算了，不是错误
+    }
+  }
+}
 
 // 让上游模块能感知到「这不是桌面 Electron 环境」
 global.__MINERADIO_ANDROID__ = true;
@@ -149,6 +190,11 @@ try {
   ]);
 } catch (err) {
   writeLog('FATAL', ['server.js 启动失败：', err]);
+  writeLog('FATAL', [
+    '提示：若报错是 ERR_PACKAGE_PATH_NOT_EXPORTED / 无法 require 某个包，' +
+      '通常是该依赖只有 ESM 版本，而内嵌运行时是 Node ' + runtimeInfo.node +
+      '（不支持 require(esm)）。',
+  ]);
   // 让原生侧能感知到失败（轮询会超时，同时日志里能看到原因）
   throw err;
 }

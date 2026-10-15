@@ -60,6 +60,14 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <!-- 启动诊断日志查看页：用户没有 adb，这是拿到失败原因的唯一入口 -->
+        <activity
+            android:name=".LogViewerActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Theme.Mineradio" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -23,18 +23,32 @@ object AssetInstaller {
 
     fun isUpToDate(context: Context): Boolean {
         val marker = AppConfig.installMarker(context)
-        if (!marker.exists()) return false
+        if (!marker.exists()) {
+            BootLog.i(TAG, "资源标记不存在，需要解压")
+            return false
+        }
         val recorded = runCatching { marker.readText().trim() }.getOrNull()
-        return recorded == AppConfig.ASSET_REVISION.toString() && sanityCheck(context)
+        val ok = recorded == AppConfig.ASSET_REVISION.toString() && sanityCheck(context)
+        BootLog.i(
+            TAG,
+            "资源版本检查：标记=$recorded 期望=${AppConfig.ASSET_REVISION} 校验通过=$ok → 需要解压=${!ok}"
+        )
+        return ok
     }
 
     /** 解压后做个最低限度校验，避免半途失败被误判为完成 */
     private fun sanityCheck(context: Context): Boolean {
         val root = AppConfig.nodeAppDir(context)
-        return File(root, AppConfig.NODE_ENTRY).isFile() &&
-            File(root, "server.js").isFile() &&
-            File(root, "public/index.html").isFile() &&
-            File(root, "node_modules/NeteaseCloudMusicApi").isDirectory
+        val checks = listOf(
+            "main.js" to File(root, AppConfig.NODE_ENTRY).isFile,
+            "server.js" to File(root, "server.js").isFile,
+            "public/index.html" to File(root, "public/index.html").isFile,
+            "node_modules/NeteaseCloudMusicApi" to File(root, "node_modules/NeteaseCloudMusicApi").isDirectory
+        )
+        for ((name, pass) in checks) {
+            if (!pass) BootLog.w(TAG, "资源校验失败，缺少：$name")
+        }
+        return checks.all { it.second }
     }
 
     /**
@@ -50,6 +64,7 @@ object AssetInstaller {
             .getOrDefault(0L)
 
         Log.i(TAG, "开始解压 ${AppConfig.NODE_APP_ASSET}（约 ${totalBytes / 1024 / 1024} MB）")
+        BootLog.i(TAG, "开始解压 → ${root.absolutePath}（压缩包 ${totalBytes} 字节）")
 
         var written = 0L
         var entryCount = 0
@@ -98,11 +113,13 @@ object AssetInstaller {
 
         // 校验通过才写标记，否则下次启动会重试解压
         if (!sanityCheck(context)) {
+            BootLog.e(TAG, "解压后校验失败：缺少入口脚本或依赖（已写入 $entryCount 个文件）")
             error("解压后校验失败：缺少入口脚本或依赖，请重新安装应用")
         }
 
         AppConfig.installMarker(context).writeText(AppConfig.ASSET_REVISION.toString())
         Log.i(TAG, "解压完成：$entryCount 个文件，${written / 1024 / 1024} MB")
+        BootLog.i(TAG, "解压完成：$entryCount 个文件，$written 字节，标记已写入")
         onProgress(written, if (totalBytes > 0) totalBytes else written, "")
     }
 
