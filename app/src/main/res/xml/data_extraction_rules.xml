@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="userdata/" />
+        <exclude domain="file" path="node-app/.cookie" />
+        <exclude domain="file" path="node-app/.qq-cookie" />
+        <exclude domain="file" path="node-app/.kugou-cookie" />
+        <exclude domain="file" path="node-app/.qishui-cookie" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="userdata/" />
+    </device-transfer>
+</data-extraction-rules>

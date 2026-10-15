@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 不上云备份运行期数据：登录 Cookie 属于用户隐私，留在本机即可 -->
+<full-backup-content>
+    <exclude domain="file" path="userdata/" />
+    <exclude domain="file" path="node-app/.cookie" />
+    <exclude domain="file" path="node-app/.qq-cookie" />
+    <exclude domain="file" path="node-app/.kugou-cookie" />
+    <exclude domain="file" path="node-app/.qishui-cookie" />
+</full-backup-content>

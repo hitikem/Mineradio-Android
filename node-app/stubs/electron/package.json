@@ -1,0 +1,7 @@
+{
+  "name": "electron",
+  "version": "0.0.0-mineradio-android-stub",
+  "private": true,
+  "description": "Mineradio Android 用的 Electron 兼容桩：让依赖 Electron 的上游模块可以正常 require，桌面专有窗口能力在安卓上按需降级。",
+  "main": "index.js"
+}

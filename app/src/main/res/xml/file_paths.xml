@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 用于把日志/崩溃报告通过 FileProvider 分享出去 -->
+<paths>
+    <files-path
+        name="mineradio_logs"
+        path="userdata/logs/" />
+    <cache-path
+        name="mineradio_cache"
+        path="." />
+</paths>

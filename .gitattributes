@@ -1,0 +1,26 @@
+# 统一换行符，避免 Windows / macOS / Linux 之间来回改行尾
+* text=auto
+
+# 脚本必须保持 LF，否则在 Linux/macOS 上会因为 CRLF 无法执行
+*.sh text eol=lf
+gradlew text eol=lf
+*.gradle text eol=lf
+*.gradle.kts text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Windows 批处理必须 CRLF
+*.bat text eol=crlf
+
+# 二进制文件不做任何处理
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.so binary
+*.zip binary
+*.jar binary
+*.apk binary
+*.wasm binary
+*.bin binary

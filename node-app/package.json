@@ -1,0 +1,19 @@
+{
+  "name": "mineradio-node-app",
+  "version": "2.2.0",
+  "private": true,
+  "description": "Mineradio 安卓移植版的内嵌 Node 运行时（上游 server.js + 生产依赖）",
+  "main": "main.js",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "NeteaseCloudMusicApi": "^4.32.0",
+    "music-metadata": "11.14.0",
+    "qrcode": "^1.5.4",
+    "electron": "file:./stubs/electron"
+  },
+  "overrides": {
+    "axios": "1.18.1",
+    "body-parser": "1.20.6",
+    "music-metadata": "11.14.0"
+  }
+}

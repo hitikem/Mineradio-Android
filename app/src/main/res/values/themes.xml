@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.Mineradio" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/mineradio_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="27">shortEdges</item>
+    </style>
+
+    <!-- 冷启动瞬间的黑场，避免白屏闪烁 -->
+    <style name="Theme.Mineradio.Splash" parent="Theme.Mineradio">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>

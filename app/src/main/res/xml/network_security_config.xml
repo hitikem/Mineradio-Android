@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  明文流量策略说明
+
+  内嵌的本地 Node 服务跑在 127.0.0.1 上，必须允许明文；这一点没有商量余地。
+
+  但为什么 base-config 也放开明文：Mineradio 聚合了网易云 / QQ 音乐 / 酷狗 / 汽水
+  等多个第三方音源，这些平台的封面 CDN 至今仍有大量 http 链接
+  （例如 http://p3.music.126.net/...），并且上游前端存在直接使用原始封面 URL
+  的渲染路径（coverUrlWithSize() 不做代理）。安卓 9 起默认禁止明文流量，
+  若不放开会表现为「封面大片空白」，而这类问题在真机上极难定位。
+
+  音频流本身统一走 /api/audio?url=... 由本地服务代理，不依赖明文直连。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

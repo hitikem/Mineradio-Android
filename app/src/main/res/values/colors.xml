@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mineradio_bg">#FF05060A</color>
+    <color name="mineradio_bg_alt">#FF0B0E16</color>
+    <color name="mineradio_accent">#FF6EE7F0</color>
+    <color name="mineradio_text">#FFE8EDF6</color>
+    <color name="mineradio_text_dim">#FF8A94A6</color>
+</resources>

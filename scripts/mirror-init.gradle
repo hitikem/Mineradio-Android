@@ -1,0 +1,36 @@
+// Gradle 依赖镜像初始化脚本（阿里云）
+//
+// 用途：dl.google.com / repo.maven.apache.org 在国内经常连不上或极慢，
+//       用这个脚本把插件仓库与依赖仓库整体换成阿里云镜像。
+//
+// 用法：
+//   ./gradlew assembleRelease --init-script scripts/mirror-init.gradle
+//
+// 也可以放到 ~/.gradle/init.gradle 让所有项目生效。
+//
+// 注意：这只影响依赖下载地址，不改变任何构建逻辑。
+//       换源后 Gradle 缓存里的旧构件仍然有效，不需要清缓存。
+
+def ALIYUN_GOOGLE = 'https://maven.aliyun.com/repository/google'
+def ALIYUN_PUBLIC = 'https://maven.aliyun.com/repository/public'
+def ALIYUN_GRADLE_PLUGIN = 'https://maven.aliyun.com/repository/gradle-plugin'
+
+settingsEvaluated { settings ->
+
+    // 1) 插件仓库（AGP、Kotlin 插件等从这里来）
+    settings.pluginManagement.repositories.clear()
+    settings.pluginManagement.repositories.maven { url ALIYUN_GOOGLE }
+    settings.pluginManagement.repositories.maven { url ALIYUN_GRADLE_PLUGIN }
+    settings.pluginManagement.repositories.maven { url ALIYUN_PUBLIC }
+
+    // 2) 依赖仓库
+    //    settings.gradle.kts 里设了 FAIL_ON_PROJECT_REPOS，
+    //    所以必须改 settings 这一层，不能改项目层。
+    try {
+        settings.dependencyResolutionManagement.repositories.clear()
+        settings.dependencyResolutionManagement.repositories.maven { url ALIYUN_GOOGLE }
+        settings.dependencyResolutionManagement.repositories.maven { url ALIYUN_PUBLIC }
+    } catch (Exception e) {
+        println "[mirror-init] 依赖仓库改写失败（不影响继续构建）：${e.message}"
+    }
+}

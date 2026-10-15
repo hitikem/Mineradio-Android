@@ -1,0 +1,91 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 安装 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 安装 SDK 组件
+        run: |
+          sdkmanager --install \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;26.1.10909125" \
+            "cmake;3.22.1"
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装 Node 运行时依赖
+        run: bash scripts/fetch-node-app-deps.sh
+
+      - name: 下载 nodejs-mobile 运行时
+        run: bash scripts/fetch-nodejs-mobile.sh
+
+      - name: 缓存 Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: 构建 Release APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: 列出产物
+        run: find app/build/outputs/apk -name '*.apk' -exec ls -la {} \;
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mineradio-android-apk
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: 发布 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+          body: |
+            Mineradio for Android —— 把桌面版 Mineradio 原样搬到安卓。
+
+            **安装说明**
+            - 现代手机（2017 年后基本都是 64 位）：`app-arm64-v8a-release.apk`
+            - 老设备（32 位）：`app-armeabi-v7a-release.apk`
+            - 不确定架构：`app-universal-release.apk`（体积较大，包含全部架构）
+
+            首次启动需要展开约 42MB 运行时资源，会有几秒钟进度条，属正常现象。
+
+            未签名的第三方 APK 可能被系统提示风险，选择「仍要安装」即可。

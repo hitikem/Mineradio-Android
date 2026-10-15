@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------- 构建产物
+*.iml
+.gradle/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+release/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+output.json
+
+# ---------------------------------------------------------------- IDE
+.idea/
+*.iws
+*.ipr
+.vscode/
+
+# ---------------------------------------------------------------- 大体积外部依赖
+# libnode.so 由 scripts/fetch-nodejs-mobile.sh 按需下载（三个 ABI 合计约 180MB）
+app/src/main/jniLibs/*/libnode.so
+
+# Node 运行时依赖由 scripts/fetch-node-app-deps.sh 安装
+node-app/node_modules/
+
+# 构建时生成的运行时资源包
+app/src/main/assets/mineradio-node-app.zip
+
+# 上游源码克隆位置（供 sync-node-app.sh 使用）
+upstream/
+
+# 下载缓存
+.cache/
+
+# ---------------------------------------------------------------- 系统
+.DS_Store
+Thumbs.db
+*.log

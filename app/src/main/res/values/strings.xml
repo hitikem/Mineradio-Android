@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mineradio</string>
+
+    <!-- 通知 -->
+    <string name="notif_channel_name">播放控制</string>
+    <string name="notif_channel_desc">显示当前播放歌曲与后台播放状态</string>
+    <string name="notif_idle_title">Mineradio</string>
+    <string name="notif_idle_text">后台运行中</string>
+
+    <!-- 通知栏按钮 -->
+    <string name="action_play">播放</string>
+    <string name="action_pause">暂停</string>
+    <string name="action_next">下一首</string>
+    <string name="action_previous">上一首</string>
+
+    <!-- 启动阶段 -->
+    <string name="boot_starting">正在启动…</string>
+    <string name="boot_installing">首次启动，正在展开运行时…</string>
+    <string name="boot_installing_pct">首次启动，正在展开运行时 %1$d%%</string>
+    <string name="boot_starting_server">正在启动本地音乐服务…</string>
+    <string name="boot_loading_page">正在加载界面…</string>
+
+    <!-- 失败提示 -->
+    <string name="boot_failed_server">本地音乐服务启动失败</string>
+    <string name="boot_failed_unknown">启动过程中出现未知错误</string>
+    <string name="boot_failed_page">界面加载失败：%1$s</string>
+    <string name="boot_retry">重试</string>
+    <string name="boot_hint">若反复失败，可在应用信息里清除数据后重试</string>
+</resources>
