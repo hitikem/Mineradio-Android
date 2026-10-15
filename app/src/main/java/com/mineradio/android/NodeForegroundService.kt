@@ -140,7 +140,8 @@ class NodeForegroundService : Service() {
                 playback?.update(state)
                 mainHandler.post { playbackListeners.forEach { it(state) } }
             },
-            onLog = { msg -> Log.i("MineradioPage", msg) }
+            onLog = { msg -> Log.i("MineradioPage", msg) },
+            onOpenLogin = { provider, requestId -> openLoginWindow(provider, requestId) }
         )
 
         val controller = PlaybackController(themed) { script -> evalJs(script) }.apply {
@@ -158,10 +159,45 @@ class NodeForegroundService : Service() {
 
         webView = view
 
-        // 首帧之前先把适配脚本插进去，保证挂钩子早于上游脚本执行
-        view.evaluateJavascript(InjectedPageScript.EARLY, null)
+        // EARLY 适配脚本由 WebView 工厂通过 DOCUMENT_START_SCRIPT 在文档解析前注入，
+        // 这里不再手动 evaluateJavascript（那样会落在 about:blank 上丢失）。
         view.loadUrl(baseUrl)
         Log.i(TAG, "WebView 开始加载 $baseUrl")
+    }
+
+    // ------------------------------------------------------------ 登录窗口
+
+    /**
+     * 打开官方网页登录窗口，并把结果回传给页面。
+     *
+     * 对应桌面版的 Electron BrowserWindow 登录：上游调用
+     * `window.desktopWindow.openNeteaseMusicLogin()` 拿到 Promise，
+     * 这里通过 requestId 把原生结果回调成 Promise 的 resolve。
+     */
+    private fun openLoginWindow(provider: LoginProvider, requestId: String) {
+        mainHandler.post {
+            LoginBridge.await(requestId) { json ->
+                val idArg = org.json.JSONObject.quote(requestId)
+                val jsonArg = org.json.JSONObject.quote(json)
+                evalJs("window.__mineradioLoginResult($idArg, $jsonArg)")
+            }
+            try {
+                startActivity(
+                    Intent(this, LoginActivity::class.java).apply {
+                        putExtra(LoginActivity.EXTRA_PROVIDER, provider.id)
+                        putExtra(LoginActivity.EXTRA_REQUEST_ID, requestId)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                )
+                Log.i(TAG, "已打开 ${provider.id} 登录窗口")
+            } catch (t: Throwable) {
+                Log.e(TAG, "打开登录窗口失败", t)
+                LoginBridge.deliver(
+                    requestId,
+                    """{"ok":false,"error":"LAUNCH_FAILED","message":"无法打开登录窗口"}"""
+                )
+            }
+        }
     }
 
     private fun fail(reason: String) {

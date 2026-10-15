@@ -16,6 +16,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 
 /**
  * 构建承载 Mineradio 前端的 WebView。
@@ -92,7 +94,41 @@ object MineradioWebViewFactory {
 
         webView.addJavascriptInterface(bridge, MediaBridge.NAME)
 
+        // ------------------------------------------------------------------
+        // 适配脚本注入
+        //
+        // EARLY 必须在**文档开始解析之前**执行（要抢在上游脚本前面装好
+        // window.MineradioAndroid / desktopWindow 和媒体钩子）。
+        // 早先的写法是在 loadUrl 之前调用 evaluateJavascript，那样脚本会跑在
+        // about:blank 上，页面一加载就丢了。
+        //
+        // 正确做法是 DOCUMENT_START_SCRIPT（WebView 89+，AndroidX WebKit 提供），
+        // 不可用时退回到 onPageStarted 注入 —— 此时文档上下文已经建立，
+        // 注入的全局对象能存活到页面脚本执行。
+        // ------------------------------------------------------------------
+        val documentStartSupported =
+            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+
+        if (documentStartSupported) {
+            runCatching {
+                WebViewCompat.addDocumentStartJavaScript(
+                    webView, InjectedPageScript.EARLY, setOf("*")
+                )
+                Log.i(TAG, "已注册文档级注入（DOCUMENT_START_SCRIPT）")
+            }.onFailure {
+                Log.w(TAG, "文档级注入注册失败，回退到 onPageStarted", it)
+            }
+        }
+
         webView.webViewClient = object : WebViewClient() {
+
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                Log.i(TAG, "开始加载：$url")
+                if (!documentStartSupported && isLocalUrl(url)) {
+                    // 回退路径：此时新文档的 JS 上下文已建立，注入的全局对象会保留
+                    view.evaluateJavascript(InjectedPageScript.EARLY, null)
+                }
+            }
 
             override fun shouldOverrideUrlLoading(
                 view: WebView,
@@ -111,14 +147,9 @@ object MineradioWebViewFactory {
                 return openExternally(view.context, url)
             }
 
-            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-                Log.i(TAG, "开始加载：$url")
-            }
-
             override fun onPageFinished(view: WebView, url: String) {
                 Log.i(TAG, "加载完成：$url")
                 if (isLocalUrl(url)) {
-                    // 页面主脚本是同步 XHR 串行加载的，稍等一拍再注入适配层
                     view.evaluateJavascript(InjectedPageScript.LATE, null)
                     onPageReady(url)
                 }

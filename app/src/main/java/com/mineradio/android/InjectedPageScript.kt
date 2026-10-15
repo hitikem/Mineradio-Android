@@ -234,6 +234,56 @@ object InjectedPageScript {
     } catch (e) { return 0; }
   }
 
+  // ---------------------------------------------------------------- 官方网页登录
+  //
+  // 上游各平台的登录都是「弹一个 Electron 窗口加载官方登录页，再捞 cookie」，
+  // 判断条件是 `window.desktopWindow && window.desktopWindow.isDesktop &&
+  // typeof window.desktopWindow.openXxxMusicLogin === 'function'`。
+  //
+  // 安卓端没有 Electron，这里用原生 WebView 提供等价能力：
+  // openXxxMusicLogin() 返回 Promise，原生打开登录窗口，完成后回调 resolve。
+  // 这样「电脑上能登的，手机上也能登」，而且不需要第二台设备扫码。
+  //
+  // 注意：只提供登录相关能力。**刻意不提供 getState**，
+  // 于是桌面窗口类功能（壁纸引擎、桌面模式）保持关闭状态 ——
+  // 上游对这些调用都有 typeof 守卫，缺失即跳过。
+  var loginSeq = 0;
+  var loginWaiters = {};
+
+  window.__mineradioLoginResult = function (requestId, json) {
+    var resolve = loginWaiters[requestId];
+    if (!resolve) return;
+    delete loginWaiters[requestId];
+    var data = {};
+    try { data = JSON.parse(json) || {}; } catch (e) { data = { ok: false, error: 'BAD_RESULT' }; }
+    try { resolve(data); } catch (e) {}
+  };
+
+  function openNativeLogin(providerId) {
+    return new Promise(function (resolve) {
+      var requestId = 'login-' + (++loginSeq) + '-' + Date.now();
+      loginWaiters[requestId] = resolve;
+      try {
+        if (window.MineradioNative && typeof window.MineradioNative.openLogin === 'function') {
+          window.MineradioNative.openLogin(providerId, requestId);
+        } else {
+          delete loginWaiters[requestId];
+          resolve({ ok: false, error: 'BRIDGE_UNAVAILABLE', message: '原生登录桥不可用' });
+        }
+      } catch (e) {
+        delete loginWaiters[requestId];
+        resolve({ ok: false, error: 'BRIDGE_ERROR', message: String(e) });
+      }
+    });
+  }
+
+  window.desktopWindow = {
+    isDesktop: true,
+    openNeteaseMusicLogin: function () { return openNativeLogin('netease'); },
+    openQQMusicLogin: function () { return openNativeLogin('qq'); },
+    openKugouMusicLogin: function () { return openNativeLogin('kugou'); }
+  };
+
   // 原生侧在页面就绪后调用一次，把状态同步过去
   window.addEventListener('load', function () { setTimeout(function () { push(true); }, 1200); });
   document.addEventListener('visibilitychange', function () { push(true); });

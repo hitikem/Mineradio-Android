@@ -19,8 +19,8 @@ android {
         targetSdk = 35
 
         // 与上游 Mineradio 版本对齐，后缀标识安卓移植线
-        versionCode = 1
-        versionName = "2.2.0-android.1"
+        versionCode = 2
+        versionName = "2.2.0-android.2"
 
         // libnode.so 每个架构 58~65MB，打进一个包会非常大。
         // 按 ABI 拆分，另外额外产出一个含全部架构的 universal 包方便分发。
@@ -114,6 +114,8 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // DOCUMENT_START_SCRIPT：把适配脚本注入到文档开始解析之前
+    implementation("androidx.webkit:webkit:1.12.1")
 }
 
 // ---------------------------------------------------------------------------

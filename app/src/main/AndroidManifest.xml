@@ -45,6 +45,15 @@
             </intent-filter>
         </activity>
 
+        <!-- 各音乐平台的官方网页登录窗口（等价于桌面版的 Electron 登录窗口） -->
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|uiMode|density|fontScale|locale|layoutDirection"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Mineradio" />
+
         <service
             android:name=".NodeForegroundService"
             android:enabled="true"

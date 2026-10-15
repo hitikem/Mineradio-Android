@@ -46,7 +46,8 @@ data class PlaybackState(
  */
 class MediaBridge(
     private val onState: (PlaybackState) -> Unit,
-    private val onLog: (String) -> Unit
+    private val onLog: (String) -> Unit,
+    private val onOpenLogin: (LoginProvider, String) -> Unit
 ) {
 
     @JavascriptInterface
@@ -57,6 +58,23 @@ class MediaBridge(
     @JavascriptInterface
     fun log(message: String) {
         onLog(message)
+    }
+
+    /**
+     * 打开官方网页登录窗口。
+     * 结果通过 `window.__mineradioLoginResult(requestId, json)` 异步回传。
+     */
+    @JavascriptInterface
+    fun openLogin(providerId: String, requestId: String) {
+        val provider = LoginProvider.from(providerId)
+        if (provider == null) {
+            LoginBridge.deliver(
+                requestId,
+                """{"ok":false,"error":"UNSUPPORTED_PROVIDER","message":"暂不支持该平台"}"""
+            )
+            return
+        }
+        onOpenLogin(provider, requestId)
     }
 
     companion object {
