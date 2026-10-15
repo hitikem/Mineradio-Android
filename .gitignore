@@ -31,6 +31,9 @@ node-app/node_modules/
 # 构建时生成的运行时资源包
 app/src/main/assets/mineradio-node-app.zip
 
+# 整理好准备上传到 Release 的 APK（体积很大，不入库）
+release-assets/
+
 # 上游源码克隆位置（供 sync-node-app.sh 使用）
 upstream/
 
