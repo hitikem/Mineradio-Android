@@ -30,12 +30,19 @@ jobs:
 
       - name: 安装 SDK 组件
         run: |
+          # 顺序很重要：必须先接受许可，否则 sdkmanager --install 会因为
+          # 「some licences have not been accepted」直接失败
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
           sdkmanager --install \
+            "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
             "ndk;26.1.10909125" \
             "cmake;3.22.1"
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          echo "--- 已安装组件 ---"
+          ls "$ANDROID_SDK_ROOT"
+          ls "$ANDROID_SDK_ROOT/ndk" 2>/dev/null || true
+          ls "$ANDROID_SDK_ROOT/platforms" 2>/dev/null || true
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4

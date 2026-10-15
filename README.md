@@ -79,14 +79,14 @@ Mineradio 的架构其实特别适合移植，关键在于两点：
 
 到 [Releases](../../releases) 下载 APK：
 
-- 现代手机（2017 年后基本都是）：`mineradio-android-arm64-v8a.apk`
-- 老设备（32 位）：`mineradio-android-armeabi-v7a.apk`
-- 不确定就装 `mineradio-android-universal.apk`（体积大一些，两种架构都含）
+- 现代手机（2017 年后基本都是 64 位）：`Mineradio-2.2.0-android-arm64-v8a.apk`
+- 老设备（32 位）：`Mineradio-2.2.0-android-armeabi-v7a.apk`
+- 不确定架构：`Mineradio-2.2.0-android-universal.apk`（体积较大，含全部架构）
 
 首次启动需要展开约 42MB 的运行时资源（近 3000 个文件），**会有几秒钟的进度条**，
 之后就都是秒开。这是正常的，不是卡住了。
 
-> 未签名的第三方 APK 可能被系统提示风险，选择「仍要安装」即可。
+> APK 使用 debug 密钥签名（未申请正式签名证书），部分系统可能提示风险，选择「仍要安装」即可。
 
 ## 自行构建
 
