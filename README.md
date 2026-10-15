@@ -1,10 +1,24 @@
 # Mineradio for Android
 
+[![Build APK](https://github.com/hitikem/Mineradio-Android/actions/workflows/build.yml/badge.svg)](https://github.com/hitikem/Mineradio-Android/actions/workflows/build.yml)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](./LICENSE)
+[![minSdk](https://img.shields.io/badge/minSdk-26-green.svg)](#已知限制)
+
 > 把 Windows 桌面沉浸式音乐播放器 [Mineradio](https://github.com/XxHuberrr/Mineradio)
 > 原样搬到安卓手机上。**不是仿制，是同一套代码在手机上跑。**
 
 歌词舞台、粒子视觉、电影镜头运镜、3D 歌单架、网易云 / QQ 音乐 / 酷狗 登录与搜索播放——
 桌面版有的效果，手机上都有。
+
+## 直接下载
+
+| 你的设备 | 下载 |
+| --- | --- |
+| 现代手机（2017 年后基本都是 64 位） | [`Mineradio-2.2.0-android-arm64-v8a.apk`](../../releases/download/v2.2.0-android.1/Mineradio-2.2.0-android-arm64-v8a.apk) |
+| 老设备（32 位） | [`Mineradio-2.2.0-android-armeabi-v7a.apk`](../../releases/download/v2.2.0-android.1/Mineradio-2.2.0-android-armeabi-v7a.apk) |
+| 不确定架构 | [`Mineradio-2.2.0-android-universal.apk`](../../releases/download/v2.2.0-android.1/Mineradio-2.2.0-android-universal.apk) |
+
+全部版本见 [Releases](../../releases)。
 
 ---
 
