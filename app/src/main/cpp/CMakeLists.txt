@@ -35,6 +35,13 @@ add_library(mineradio_node SHARED mineradio_node.cpp)
 
 find_library(log-lib log)
 
+# 显式要求 16KB 段对齐。
+# NDK r27 起默认就是这个值，这里写死是为了避免将来换回旧 NDK 时
+# 又出现「16KB 内存页机型上加载失败」这种只在真机上才暴露的问题。
+target_link_options(mineradio_node PRIVATE
+    "-Wl,-z,max-page-size=16384"
+)
+
 target_link_libraries(mineradio_node
     node
     ${log-lib}

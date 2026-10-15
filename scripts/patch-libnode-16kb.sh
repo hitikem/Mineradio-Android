@@ -15,10 +15,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 JNI_LIBS="$ROOT_DIR/app/src/main/jniLibs"
 
-PY="${PYTHON:-python}"
-if ! command -v "$PY" >/dev/null 2>&1; then
+# 找一个可用的 Python（脚本只用标准库，不需要装任何包）
+PY="${PYTHON:-}"
+if [ -z "$PY" ]; then
+  for cand in python3 python; do
+    if command -v "$cand" >/dev/null 2>&1; then PY="$cand"; break; fi
+  done
+fi
+if [ -z "$PY" ] && [ -x "C:/Users/Administrator/.workbuddy-ai/binaries/python/versions/3.13.12/python.exe" ]; then
   PY="C:/Users/Administrator/.workbuddy-ai/binaries/python/versions/3.13.12/python.exe"
 fi
+if [ -z "$PY" ]; then
+  echo "找不到 Python，无法修补 libnode.so"
+  exit 1
+fi
+echo "使用 Python: $PY"
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1

@@ -7,9 +7,10 @@ android {
     namespace = "com.mineradio.android"
     compileSdk = 35
 
-    // 钉住 NDK 版本：AGP 8.7 默认会去找 27.0.12077973，
-    // 而本项目在 26.1.10909125 上验证通过，不显式指定会直接报「NDK not configured」。
-    ndkVersion = "26.1.10909125"
+    // NDK 27：从 r27 起 NDK 默认按 16KB 页对齐构建，其自带的 libc++_shared.so
+    // 也是 16KB 对齐的。用 r26 的话 libc++_shared.so 与自研 JNI 库都是 4KB 对齐，
+    // 在 16KB 内存页机型上会加载失败 —— 光修补 libnode.so 解决不了。
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.mineradio.android"
@@ -19,8 +20,8 @@ android {
         targetSdk = 35
 
         // 与上游 Mineradio 版本对齐，后缀标识安卓移植线
-        versionCode = 2
-        versionName = "2.2.0-android.2"
+        versionCode = 3
+        versionName = "2.2.0-android.3"
 
         // libnode.so 每个架构 58~65MB，打进一个包会非常大。
         // 按 ABI 拆分，另外额外产出一个含全部架构的 universal 包方便分发。

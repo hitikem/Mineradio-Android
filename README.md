@@ -83,6 +83,23 @@ Mineradio 的架构其实特别适合移植，关键在于两点：
 - 播放 / 上一首 / 下一首按钮触摸目标不小于 44dp
 - 安卓返回键：优先关弹层，没有弹层则退到后台而不是退出（音乐继续）
 
+## 界面方向：横屏
+
+界面锁定为**横屏**（`sensorLandscape`，左右两个方向都支持）。
+
+原因是 Mineradio 的界面本来就是为**桌面宽窗口**设计的：歌词舞台、3D 歌单架、
+底部播放控制条都按宽扁比例排版。竖屏下这些元素会被挤在一起，
+横屏才更接近电脑上的观感 —— 这也正是「电脑上是怎样，手机上就怎样」的要求。
+
+> 想改成跟随系统方向：把 `AndroidManifest.xml` 里 MainActivity 的
+> `android:screenOrientation` 改成 `fullSensor` 即可。
+
+## 相关项目
+
+- [XxHuberrr/Mineradio](https://github.com/XxHuberrr/Mineradio) —— 上游桌面版，本仓库的基础
+- [Timingyyds/Mineradio-Android](https://github.com/Timingyyds/Mineradio-Android) —— 同期的另一个安卓移植（横屏 H5 + Kotlin 壳 + Node 桥接），
+  路线相近，可以互相参照；本项目的横屏取向即受其启发
+
 ## 更新日志
 
 ### 2.2.0-android.2
@@ -91,14 +108,32 @@ Mineradio 的架构其实特别适合移植，关键在于两点：
 
 Android 15 起，部分新机型（Pixel 8/9 系列、部分新旗舰）内核使用 16KB 内存页。
 动态链接器要求每个 `PT_LOAD` 满足 `p_offset ≡ p_vaddr (mod 页大小)`，
-而 nodejs-mobile 官方预编译的 `libnode.so` 是 2024 年用旧 NDK 构建的，
-`p_align` 全是 4096，在这类机型上 `dlopen` 直接失败 —— 表现就是「能装上，点开闪退」。
+不满足就 `dlopen` 失败 —— 表现就是「能装上，点开闪退」。
 
-由于这是**同余**关系而非绝对对齐，不需要重新编译 Node：
+这个坑比看上去深：APK 里有**三个**原生库，而它们**全都是 4KB 对齐的**：
+
+| 库 | 来源 | 修法 |
+| --- | --- | --- |
+| `libnode.so` | nodejs-mobile 官方预编译（2024 年，旧 NDK） | 打补丁（见下） |
+| `libc++_shared.so` | 构建用的 NDK | **换 NDK r27** |
+| `libmineradio_node.so` | 本项目的 JNI 桥 | **换 NDK r27** + 显式链接参数 |
+
+也就是说只修 `libnode.so` 是不够的。前两个属于工具链问题，换 NDK r27
+（默认就按 16KB 构建，自带的 `libc++_shared.so` 也是 16KB）即可；
+`libnode.so` 是第三方预编译产物，没法重新编译 Node，所以打补丁：
+
+由于 `p_offset ≡ p_vaddr` 是**同余**关系而非绝对对齐，不需要重新编译：
 `scripts/patch-elf-16kb.py` 在每个 LOAD 段前插入少量填充字节，
 把文件偏移挪到与 vaddr 同余的位置，并把 `p_align` 改为 16384，
 同时修正节头表偏移。vaddr、重定位、动态符号全部不动，
-各段有效数据**逐字节不变**（脚本会自校验，并通过 `llvm-strip` 交叉验证）。
+各段有效数据**逐字节不变**（脚本自校验 + `llvm-strip` 交叉验证）。
+
+`scripts/verify-apk-16kb.py` 会在构建末尾直接从 APK 里抽出所有 `.so` 复验，
+不通过就让构建失败 —— 这类问题只在真机上暴露，必须靠静态校验兜住。
+
+> 32 位 ABI（armeabi-v7a）不强制 16KB：16KB 页是 64 位内核特性，
+> Google 的适配要求也只覆盖 `arm64-v8a` / `x86_64`，NDK r27 的 armv7
+> `libc++_shared.so` 至今仍是 4KB 对齐，即为此意。
 
 **新增：账号登录**
 
@@ -137,8 +172,13 @@ Android 15 起，部分新机型（Pixel 8/9 系列、部分新旗舰）内核�
 ### 环境要求
 
 - JDK 17
-- Android SDK：platform 35、build-tools 35.0.0、**NDK 26.1.10909125**、CMake 3.22.1
+- Android SDK：platform 35、build-tools 35.0.0、**NDK 27.0.12077973**、CMake 3.22.1
 - Node.js 18+（只用于装依赖和跑同步脚本）
+
+> NDK 版本不能降回 r26：从 **r27** 起 NDK 默认按 16KB 页对齐构建，
+> 它自带的 `libc++_shared.so` 也是 16KB 对齐的。用 r26 的话，
+> `libc++_shared.so` 与自研 JNI 库都会是 4KB 对齐，在 16KB 内存页机型上加载失败 ——
+> 只修补 `libnode.so` 是解决不了的。
 
 ### 步骤
 

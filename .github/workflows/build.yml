@@ -61,7 +61,7 @@ jobs:
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
-            "ndk;26.1.10909125" \
+            "ndk;27.0.12077973" \
             "cmake;3.22.1"
 
           echo "--- 已安装组件 ---"
@@ -75,6 +75,12 @@ jobs:
 
       - name: 下载 nodejs-mobile 运行时
         run: bash scripts/fetch-nodejs-mobile.sh
+
+      # 关键：nodejs-mobile 官方预编译的 libnode.so 是 4KB 对齐的，
+      # 在 16KB 内存页机型（Android 15+ 的部分新机型）上 dlopen 会失败，
+      # 表现为「能装上，点开闪退」。这一步把它改成 16KB 同余对齐。
+      - name: 应用 16KB 页对齐补丁
+        run: bash scripts/patch-libnode-16kb.sh
 
       - name: 缓存 Gradle
         uses: actions/cache@v4
@@ -110,6 +116,14 @@ jobs:
 
       - name: 列出产物
         run: find app/build/outputs/apk -name '*.apk' -exec ls -la {} \;
+
+      # 最后一道关卡：直接从 APK 里把 .so 抽出来验证 16KB 对齐。
+      # 这一条不过就让构建失败 —— 这类问题只在 16KB 内存页的真机上才暴露，
+      # 本地和普通模拟器都测不出来，必须靠静态校验兜住。
+      - name: 校验原生库 16KB 对齐
+        run: |
+          python3 scripts/verify-apk-16kb.py \
+            app/build/outputs/apk/release/*.apk
 
       - name: 上传 APK
         uses: actions/upload-artifact@v4
